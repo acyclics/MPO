@@ -1,7 +1,9 @@
 # MPO (Maximum a Posteriori Policy Optimization)
 Pytorch implementation of MPO (works cited below) with the help of other repositories (also cited below).
+
 Policy evaluation is done using Retrace.
-Currently only accomodate Discrete gym environments.
+
+Currently only accommodate Discrete gym environments.
 
 # Citations
 * Maximum a Posteriori Policy Optimisation:
