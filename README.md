@@ -24,4 +24,4 @@ The architectures for Actor and Critic can be changed in mpo_net.py.
 >https://github.com/openai/baselines/tree/master/baselines/acer
 
 # Training Results
-To be posted soon.
+![mpo_on_LunarLanderV2](https://github.com/acyclics/MPO/blob/master/lunarlander_mpo.jpg?raw=true)
