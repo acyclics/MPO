@@ -26,3 +26,6 @@ The architectures for Actor and Critic can be changed in mpo_net.py.
 # Training Results
 ![mpo_on_LunarLanderV2](lunarlander_mpo.png?raw=true)
 - 5 parallel environments
+
+![mpo_on_AcrobotV1](acrobot_mpo.png?raw=true)
+- 5 paralle environments
