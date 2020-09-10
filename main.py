@@ -13,7 +13,10 @@ torch.manual_seed(0)
 if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
-    vec_env = gym.vector.make('LunarLander-v2', num_envs=5)
+    num_envs = 5
+    env_name = 'LunarLander-v2'
+
+    vec_env = gym.vector.make(env_name, num_envs=5)
 
     obs_shape = vec_env.observation_space.shape[-1]
     action_shape = vec_env.action_space[0].n
@@ -31,7 +34,7 @@ if __name__ == '__main__':
         mpo.train()
 
     def evaluate():
-        env = gym.make("LunarLander-v2")
+        env = gym.make(env_name)
         mpo = MPO(vec_env, actor, critic, obs_shape, action_shape, device=device)
         mpo.load_model()
 

@@ -30,6 +30,11 @@ class CategoricalActor(nn.Module):
             prob = action_distribution.probs
         return action, prob
     
+    def get_action_prob(self, state):
+        probs = self.forward(state)
+        action_distribution = Categorical(probs=probs)
+        return action_distribution.probs
+    
     def evaluate_action(self, state, action):
         probs = self.forward(state)
         action_distribution = Categorical(probs=probs)

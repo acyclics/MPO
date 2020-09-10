@@ -51,7 +51,7 @@ class MPO(object):
         self.sample_episodes = sample_episodes
         self.episode_length = episode_length
         self.lagrange_it = lagrange_it
-        self.mb_size = (episode_length-1) * env.num_envs
+        self.mb_size = (episode_length) * env.num_envs
         self.runs = runs
         self.device = device
 
@@ -88,6 +88,7 @@ class MPO(object):
 
         for _ in range(self.sample_episodes):
             obs = self.env.reset()
+            done = False
 
             obs_b = np.zeros([self.episode_length, self.env.num_envs, self.obs_shape])
             action_b = np.zeros([self.episode_length, self.env.num_envs])
@@ -100,22 +101,28 @@ class MPO(object):
                 action = np.reshape(action.cpu().numpy(), -1)
                 prob = prob.cpu().numpy()
 
-                new_obs, reward, done, _ = self.env.step(action)
+                obs_b[steps] = obs
+                done_b[steps] = done
+
+                obs, reward, done, _ = self.env.step(action)
                 mean_reward += reward
 
-                obs_b[steps] = obs
                 action_b[steps] = action
                 reward_b[steps] = reward
                 prob_b[steps] = prob
-                done_b[steps] = done
-
-                obs = new_obs
             
             self.buffer.put(obs_b, action_b, reward_b, prob_b, done_b)
 
-        return mean_reward
+        return mean_reward / self.episode_length / self.sample_episodes
 
     def _update_critic_retrace(self, state_batch, action_batch, policies_batch, reward_batch, done_batch):
+        state_batch_last = state_batch[-1]
+
+        state_batch = state_batch[0:-1]
+        action_batch = action_batch[0:-1]
+        policies_batch = policies_batch[0:-1]
+        reward_batch = reward_batch[0:-1]
+
         action_size = policies_batch.shape[-1]
         nsteps = state_batch.shape[0]
         n_envs = state_batch.shape[1]
@@ -143,9 +150,9 @@ class MPO(object):
         rho_i = rho.gather(1, actions.long())
 
         with torch.no_grad():
-            next_qval = self.critic(state_batch[-1]).detach()
-            policies, a_log_prob, entropy = self.actor.evaluate_action(state_batch[-1], action_batch[-1])
-            next_val = (next_qval * policies).sum(1, keepdim=True)
+            next_qval = self.critic(state_batch_last).detach()
+            next_policies = self.actor.get_action_prob(state_batch_last).detach()
+            next_val = (next_qval * next_policies).sum(1, keepdim=True)
         
         q_retraces = reward_batch.new(nsteps + 1, n_envs, 1).zero_()
         q_retraces[-1] = next_val
@@ -193,11 +200,11 @@ class MPO(object):
             for _ in range(self.runs):
                 state_batch, action_batch, reward_batch, policies_batch, done_batch = self.buffer.get()
 
-                state_batch = torch.from_numpy(state_batch).to(self.device).float()[0:-1]
-                action_batch = torch.from_numpy(action_batch).to(self.device).float()[0:-1]
-                reward_batch = torch.from_numpy(reward_batch).to(self.device).float()[0:-1]
-                policies_batch = torch.from_numpy(policies_batch).to(self.device).float()[0:-1]
-                done_batch = torch.from_numpy(done_batch).to(self.device).float()[0:]
+                state_batch = torch.from_numpy(state_batch).to(self.device).float()
+                action_batch = torch.from_numpy(action_batch).to(self.device).float()
+                reward_batch = torch.from_numpy(reward_batch).to(self.device).float()
+                policies_batch = torch.from_numpy(policies_batch).to(self.device).float()
+                done_batch = torch.from_numpy(done_batch).to(self.device).float()
 
                 reward_batch = torch.unsqueeze(reward_batch, dim=-1)
                 done_batch = torch.unsqueeze(done_batch, dim=-1)
